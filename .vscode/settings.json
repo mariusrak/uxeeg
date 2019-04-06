@@ -1,0 +1,31 @@
+{
+        "editor.tabSize": 8,
+        "mongoRunner": {
+                "connection": {
+                        "url": "mongodb://localhost:3001",
+                        "activeOnStartUp": true
+                }
+        },
+        "javascript.implicitProjectConfig.experimentalDecorators": true,
+        "prettier": {
+                "tabWidth": 8,
+                "printWidth": 120
+        },
+        "eslint": {
+                "rules": {
+                        "indent": [1, 8]
+                },
+                "parser": "babel-eslint",
+                "parserOptions": {
+                        "ecmaVersion": 6,
+                        "sourceType": "module",
+                        "ecmaFeatures": {
+                                "jsx": true,
+                                "modules": true,
+                                "experimentalObjectRestSpread": true
+                        }
+                },
+                "plugins": ["react"],
+                "extends": ["eslint:recommended", "plugin:react/recommended"]
+        }
+}
