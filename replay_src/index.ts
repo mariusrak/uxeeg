@@ -112,12 +112,18 @@ export class Replayer {
          * and cast event after the offset asynchronously with timer.
          * @param timeOffset number
          */
-        public play(timeOffset = 0) {
+        public play() {
                 this.timer.clear();
-                this.baselineTime = this.events[0].timestamp + timeOffset;
+                this.sync();
+                this.timer.start();
+                this.emitter.emit(ReplayerEvents.Start);
+        }
+
+        public sync(timeOffset = 0) {
+                this.baselineTime = this.events[0].timestamp;
                 const actions = new Array<actionWithDelay>();
                 for (const event of this.events) {
-                        const isSync = event.timestamp < this.baselineTime;
+                        const isSync = event.timestamp < this.baselineTime + timeOffset;
                         const castFn = this.getCastFn(event, isSync);
                         if (isSync) {
                                 castFn();
@@ -126,8 +132,13 @@ export class Replayer {
                         }
                 }
                 this.timer.addActions(actions);
-                this.timer.start();
-                this.emitter.emit(ReplayerEvents.Start);
+        }
+
+        public rewind(timeOffset = 0) {
+                this.pause();
+                this.timer.timeOffset = timeOffset;
+                this.sync(timeOffset);
+                this.resume();
         }
 
         public pause() {
@@ -167,6 +178,12 @@ export class Replayer {
                 this.iframe.setAttribute("sandbox", "allow-same-origin");
                 this.iframe.setAttribute("scrolling", "no");
                 this.wrapper.appendChild(this.iframe);
+        }
+
+        public destroy() {
+                this.pause();
+                this.emitter.emit(ReplayerEvents.Finish);
+                this.wrapper.remove();
         }
 
         private handleResize(dimension: viewportResizeDimention) {

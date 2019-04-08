@@ -29,21 +29,16 @@ export default class Timer {
         }
 
         public start() {
-                this.actions.sort((a1, a2) => a1.delay - a2.delay);
                 this.timeOffset = 0;
                 this.resume();
         }
 
         public resume() {
+                this.actions.sort((a1, a2) => a1.delay - a2.delay);
                 let lastTimestamp = performance.now();
                 const { actions, config } = this;
                 const self = this;
                 function check(time: number) {
-                        self.timeOffset += (time - lastTimestamp) * config.speed;
-                        if (self.onTimeOffsetChange) {
-                                self.onTimeOffsetChange(self.timeOffset);
-                        }
-                        lastTimestamp = time;
                         while (actions.length) {
                                 const action = actions[0];
                                 if (self.timeOffset >= action.delay) {
@@ -56,6 +51,11 @@ export default class Timer {
                         if (actions.length > 0) {
                                 self.raf = requestAnimationFrame(check);
                         }
+                        self.timeOffset += (time - lastTimestamp) * config.speed;
+                        if (self.onTimeOffsetChange) {
+                                self.onTimeOffsetChange(self.timeOffset);
+                        }
+                        lastTimestamp = time;
                 }
                 this.raf = requestAnimationFrame(check);
         }
@@ -64,7 +64,7 @@ export default class Timer {
                 if (this.raf) {
                         cancelAnimationFrame(this.raf);
                 }
-                // this.actions.length = 0;
+                this.actions.length = 0;
         }
 
         private findActionIndex(action: actionWithDelay): number {
