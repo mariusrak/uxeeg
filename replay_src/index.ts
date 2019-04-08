@@ -136,21 +136,21 @@ export class Replayer {
         }
 
         public resume(timeOffset = 0) {
-                this.timer.clear();
-                this.baselineTime = this.events[0].timestamp + timeOffset;
-                const actions = new Array<actionWithDelay>();
-                for (const event of this.events) {
-                        if (event.timestamp <= this.lastPlayedEvent.timestamp || event === this.lastPlayedEvent) {
-                                continue;
-                        }
-                        const castFn = this.getCastFn(event);
-                        actions.push({
-                                doAction: castFn,
-                                delay: this.getDelay(event)
-                        });
-                }
-                this.timer.addActions(actions);
-                this.timer.start();
+                // this.timer.clear();
+                // this.baselineTime = this.events[0].timestamp + timeOffset;
+                // const actions = new Array<actionWithDelay>();
+                // for (const event of this.events) {
+                //         if (event.timestamp <= this.lastPlayedEvent.timestamp || event === this.lastPlayedEvent) {
+                //                 continue;
+                //         }
+                //         const castFn = this.getCastFn(event);
+                //         actions.push({
+                //                 doAction: castFn,
+                //                 delay: this.getDelay(event)
+                //         });
+                // }
+                // this.timer.addActions(actions);
+                this.timer.resume();
                 this.emitter.emit(ReplayerEvents.Resume);
         }
 

@@ -1,4 +1,4 @@
-/**/
+/** /
 // Pure puppeteer version
 const puppeteer = require("puppeteer");
 
