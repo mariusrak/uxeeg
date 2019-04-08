@@ -1,31 +1,38 @@
 {
-        "editor.tabSize": 8,
-        "mongoRunner": {
-                "connection": {
-                        "url": "mongodb://localhost:3001",
-                        "activeOnStartUp": true
-                }
-        },
-        "javascript.implicitProjectConfig.experimentalDecorators": true,
-        "prettier": {
-                "tabWidth": 8,
-                "printWidth": 120
-        },
-        "eslint": {
-                "rules": {
-                        "indent": [1, 8]
-                },
-                "parser": "babel-eslint",
-                "parserOptions": {
-                        "ecmaVersion": 6,
-                        "sourceType": "module",
-                        "ecmaFeatures": {
-                                "jsx": true,
-                                "modules": true,
-                                "experimentalObjectRestSpread": true
-                        }
-                },
-                "plugins": ["react"],
-                "extends": ["eslint:recommended", "plugin:react/recommended"]
-        }
+  "editor.tabSize": 8,
+  "prettier": {
+    "tabWidth": 8,
+    "printWidth": 120
+  },
+  "eslint": {
+    "rules": {
+      "indent": [1, 8]
+    },
+    "parser": "babel-eslint",
+    "parserOptions": {
+      "ecmaVersion": 6,
+      "sourceType": "module",
+      "ecmaFeatures": {
+        "jsx": true,
+        "modules": true,
+        "experimentalObjectRestSpread": true
+      }
+    },
+    "plugins": ["react"],
+    "extends": ["eslint:recommended", "plugin:react/recommended"]
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    ".gitignore": true,
+    "replay_js": true,
+    "public": true,
+    "node_modules/": true,
+    "rrweb_min": true,
+    "README.md": true,
+    "package-lock.json": true
+  }
 }

@@ -1,4 +1,4 @@
-/** /
+/**/
 // Pure puppeteer version
 const puppeteer = require("puppeteer");
 
@@ -21,8 +21,10 @@ const read_events = file => {
 (async () => {
         const controls_browser = await puppeteer.launch({
                 headless: false,
+                defaultViewport: null,
                 frame: false,
-                args: ["--app=http://localhost:3000", "--window-size=800,250", "--window-position=560,900"]
+                args: ["--app=http://localhost:3000", "--start-maximized"] //, "--kiosk"]
+                // args: ["--app=http://localhost:3000", "--window-size=800,250", "--window-position=560,900"]
         });
         const _controls = await controls_browser.pages();
         const controls = _controls[0];
@@ -38,19 +40,20 @@ const read_events = file => {
         //         window.read_events = read_events;
         // });
 })();
-/**/
-/**/
+
+/*/
 // Electron version
 const { app, BrowserWindow } = require("electron");
+const path = require("path");
 let mainWindow;
 
 app.on("ready", () => {
         mainWindow = new BrowserWindow({
-                width: 800,
-                height: 250,
-                x: 560,
-                y: 900,
-                maximizable: false,
+                // width: 800,
+                // height: 250,
+                // x: 560,
+                // y: 900,
+                // maximizable: false,
                 alwaysOnTop: true,
                 autoHideMenuBar: true,
                 title: "UXEEG is getting ready",
@@ -59,9 +62,13 @@ app.on("ready", () => {
                         nodeIntegration: true
                 }
         });
+        mainWindow.maximize();
+        mainWindow.webContents.openDevTools();
         mainWindow.loadURL("http://localhost:3000");
         mainWindow.on("closed", function() {
                 mainWindow = null;
+                app.quit();
         });
 });
+
 /**/
