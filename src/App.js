@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import ReactDOM from "react-dom";
-import styled from "styled-components";
+import styled, { createGlobalStyle } from "styled-components";
 import { Replayer } from "./replay";
 import "./replay/styles/style.css";
 import example_events from "./example_recording.json";
@@ -13,41 +13,19 @@ const { open_file, load_replay } = window.require("electron").remote.require("./
 const load_replay = () => {};
 /**/
 
-const textToArr = res => {
-        const match = res.match(/^\s+const events = (\[.*\]);.*$/m);
-        if (match) {
-                return JSON.parse(match[1]);
+const GlobalStyle = createGlobalStyle`
+        html,
+        body {
+                height: 100%;
         }
-        return res.split(/\n/).reduce((arr, row) => {
-                try {
-                        const e = JSON.parse(row);
-                        return [...arr, e];
-                } catch (e) {
-                        return arr;
-                }
-        }, []);
-};
-const make_reader = cb => {
-        const FR = new FileReader();
-        FR.onload = e => {
-                const txt = e.target.result.replace(/http/g, "http://localhost:4000/pipe/http");
-                try {
-                        cb(JSON.parse(txt));
-                } catch (err) {
-                        cb(textToArr(txt));
-                }
-        };
-        FR.onerror = e => console.log(e);
-        FR.onabort = e => console.log(e);
-        return FR;
-};
+`;
 
 const Controls = styled.div`
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        height: 100px;
+        height: 50px;
 `;
 const PlayerFrame = styled.div`
         // transform: scale(0.85);
@@ -81,6 +59,19 @@ const formatDateTime = date => {
         const d = new Date(date);
         return `${d.getDate()}.${d.getMonth()}.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`;
 };
+const formatMachineDateTime = date => {
+        const d = new Date(date);
+        return parseInt(
+                d.getFullYear() +
+                        (d.getMonth() + 1) +
+                        d.getDate() +
+                        d.getHours() +
+                        d.getMinutes() +
+                        d.getSeconds() +
+                        d.getMilliseconds(),
+                10
+        );
+};
 const formatDate = date => {
         const d = new Date(date);
         return `${d.getDate()}.${d.getMonth()}.${d.getFullYear()}`;
@@ -91,6 +82,47 @@ const formatTime = date => {
 };
 
 const Load = props => <LoadStyled type="file" {...props} />;
+
+let eye_tracker_data;
+const parse_events = (txt, cb) => {
+        const data = txt.replace(/http/g, "http://localhost:4000/pipe/http");
+        try {
+                cb(JSON.parse(data));
+        } catch (err) {
+                const match = data.match(/^\s+const events = (\[.*\]);.*$/m);
+                if (match) {
+                        return cb(JSON.parse(match[1]));
+                }
+                const ret = data.split(/\n/).reduce((arr, row) => {
+                        try {
+                                const e = JSON.parse(row);
+                                return [...arr, e];
+                        } catch (e) {
+                                return arr;
+                        }
+                }, []);
+                cb(ret);
+        }
+};
+const parse_eyetracker = (txt, cb) => {
+        eye_tracker_data = txt
+                .replace(/(^(#|StudyName).*[\n\r]+)/gm, "")
+                .split(/[\r\n]+/gm)
+                .map(line => {
+                        const cols = line.split(/[\t|\s]+/);
+                        return { time: parseInt((cols[10] || "").replace("_", "", 10)), x: cols[27], y: cols[28] }; // Timestamp, GazeX, GazeY
+                        //return { time: cols[10], x: cols[27], y: cols[28], fx: cols[38], fy, cols[39], mx:cols[46], my: cols[47] }; // Timestamp, GazeX, GazeY, FixationX, FixationY, (mouse?)X, (mouse?)Y
+                });
+        cb(eye_tracker_data);
+        console.log("eye tracker data read finished");
+};
+const make_reader = (parser, cb) => {
+        const FR = new FileReader();
+        FR.onload = e => parser(e.target.result, cb);
+        FR.onerror = e => console.log(e);
+        FR.onabort = e => console.log(e);
+        return data => FR.readAsText(data);
+};
 
 class PlayerScreen extends React.Component {
         componentDidUpdate(prevProps) {
@@ -179,35 +211,39 @@ const DropZone = styled.div`
 `;
 
 class App extends Component {
-        state = { events: null, play: false, time: null, dropping: false };
+        state = { events: null, eyetracker: null, play: false, time: null, dropping: false };
+        setEyetracker = () => {
+                if (!this.state.events || !eye_tracker_data) {
+                        return;
+                }
+                const start = formatMachineDateTime(this.state.events[0].timestamp);
+                const end = formatMachineDateTime(this.state.events[this.state.events.length - 1].timestamp);
+                const eyetracker = eye_tracker_data.filter(e => e.time && (e.time > start || e.time < end));
+                this.setState({ eyetracker }, () => console.log(this.state.eyetracker));
+        };
         componentDidMount() {
-                this.reader = make_reader(events =>
-                        this.setState({ events: null, play: false }, () => this.setState({ events, play: true }))
+                this.reader_events = make_reader(parse_events, events =>
+                        this.setState({ events: null, play: false }, () => {
+                                this.setState({ events, play: true }, () => this.setEyetracker());
+                        })
                 );
-                this.setState({ events: example_events, play: true });
-
-                document.addEventListener(
-                        "dragenter",
-                        e => {
-                                e.preventDefault();
-                                this.setState({ dropping: true });
-                        },
-                        false
+                this.reader_eyetracker = make_reader(parse_eyetracker, () =>
+                        this.setState({ eyetracker: null, play: false }, () => {
+                                this.setEyetracker();
+                        })
                 );
                 document.addEventListener("dragover", e => e.preventDefault(), false);
-                document.addEventListener(
-                        "dragleave",
-                        e => {
-                                e.preventDefault();
-                                this.setState({ dropping: false });
-                        },
-                        false
-                );
                 document.addEventListener(
                         "drop",
                         e => {
                                 e.preventDefault();
-                                this.reader.readAsText(e.dataTransfer.files[0]);
+                                const file = e.dataTransfer.files[0];
+                                const ext = file.name.match(/\.(\w+)$/)[1];
+                                if (ext === "txt") {
+                                        this.reader_eyetracker(file);
+                                } else if (["json", "html", "rec"].includes(ext)) {
+                                        this.reader_events(file);
+                                }
                         },
                         false
                 );
@@ -271,34 +307,38 @@ class App extends Component {
                         this.state.events[this.state.events.length - 1].timestamp - this.state.events[0].timestamp;
                 return (
                         <>
-                                {this.state.dropping && <DropZone />}
                                 <PlayerScreen
                                         {...this.state}
                                         onTimeOffsetChange={time => {
                                                 this.setState({ time });
                                         }}
                                 />
-                                <Controls>
-                                        <button onClick={() => this.setState({ play: !this.state.play })}>
-                                                {this.state.play ? (
-                                                        <>
-                                                                Playing, <b>Pause ||</b>
-                                                        </>
-                                                ) : (
-                                                        <>
-                                                                Paused, <b>Play ></b>
-                                                        </>
-                                                )}
-                                        </button>{" "}
-                                        {time_data}
-                                        <TimeLine
-                                                total={total_time}
-                                                current={this.state.time}
-                                                onChange={t => this.setState({ setTime: t })}
-                                                // onChange={t => alert(this.findEventIndex(t))}
-                                        />
-                                        <Load onChange={e => this.reader.readAsText(e.target.files[0])} />
-                                </Controls>
+                                {this.state.events ? (
+                                        <Controls>
+                                                <button onClick={() => this.setState({ play: !this.state.play })}>
+                                                        {this.state.play ? (
+                                                                <>
+                                                                        Playing, <b>Pause ||</b>
+                                                                </>
+                                                        ) : (
+                                                                <>
+                                                                        Paused, <b>Play ></b>
+                                                                </>
+                                                        )}
+                                                </button>{" "}
+                                                {time_data}
+                                                <TimeLine
+                                                        total={total_time}
+                                                        current={this.state.time}
+                                                        onChange={t => this.setState({ setTime: t })}
+                                                        // onChange={t => alert(this.findEventIndex(t))}
+                                                />
+                                                {/* <Load onChange={e => this.reader.readAsText(e.target.files[0])} /> */}
+                                        </Controls>
+                                ) : (
+                                        <DropZone />
+                                )}
+                                <GlobalStyle />
                         </>
                 );
         }
