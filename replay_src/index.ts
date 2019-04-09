@@ -135,10 +135,13 @@ export class Replayer {
         }
 
         public rewind(timeOffset = 0) {
+                const played = !!this.timer.actions.length;
                 this.pause();
                 this.timer.timeOffset = timeOffset;
                 this.sync(timeOffset);
-                this.resume();
+                if (played) {
+                        this.resume();
+                }
         }
 
         public pause() {

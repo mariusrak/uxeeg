@@ -3,15 +3,6 @@ import ReactDOM from "react-dom";
 import styled, { createGlobalStyle } from "styled-components";
 import { Replayer } from "./replay";
 import "./replay/styles/style.css";
-import example_events from "./example_recording.json";
-//console.log(Replayer);
-// const { Replayer } = window.require("electron").remote.require("./replay/");
-
-/** /
-const { open_file, load_replay } = window.require("electron").remote.require("./play.js");
-/* /
-const load_replay = () => {};
-/**/
 
 const GlobalStyle = createGlobalStyle`
         html,
@@ -20,12 +11,47 @@ const GlobalStyle = createGlobalStyle`
         }
 `;
 
+const DropZone = styled.div`
+        position: fixed;
+        z-index: 999;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.7);
+        &:before,
+        &:after {
+                content: "Drop Here!";
+                z-index: 999;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: block;
+                width: 300px;
+                text-align: center;
+                font-size: 30px;
+                position: absolute;
+                margin: auto;
+                font-family: sans-serif;
+                height: 30px;
+                color: #333;
+        }
+        &:after {
+                content: "";
+                width: calc(100% - 30px);
+                height: calc(100% - 30px);
+                border-radius: 15px;
+                border: 5px dashed;
+        }
+`;
 const Controls = styled.div`
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
         height: 50px;
+        z-index: 3;
 `;
 const PlayerFrame = styled.div`
         // transform: scale(0.85);
@@ -55,6 +81,15 @@ const TimeLinePrgress = styled.div`
         background: #777;
         height: 10px;
 `;
+const GazeCanvas = styled.div`
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: auto;
+        z-index: 2;
+`;
 const formatDateTime = date => {
         const d = new Date(date);
         return `${d.getDate()}.${d.getMonth()}.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`;
@@ -62,13 +97,14 @@ const formatDateTime = date => {
 const formatMachineDateTime = date => {
         const d = new Date(date);
         return parseInt(
-                d.getFullYear() +
-                        (d.getMonth() + 1) +
-                        d.getDate() +
-                        d.getHours() +
-                        d.getMinutes() +
-                        d.getSeconds() +
-                        d.getMilliseconds(),
+                "" +
+                        d.getFullYear() +
+                        ("00" + (d.getMonth() + 1)).substr(-2) +
+                        ("00" + d.getDate()).substr(-2) +
+                        ("00" + d.getHours()).substr(-2) +
+                        ("00" + d.getMinutes()).substr(-2) +
+                        ("00" + d.getSeconds()).substr(-2) +
+                        ("000" + d.getMilliseconds()).substr(-3),
                 10
         );
 };
@@ -110,11 +146,11 @@ const parse_eyetracker = (txt, cb) => {
                 .split(/[\r\n]+/gm)
                 .map(line => {
                         const cols = line.split(/[\t|\s]+/);
-                        return { time: parseInt((cols[10] || "").replace("_", "", 10)), x: cols[27], y: cols[28] }; // Timestamp, GazeX, GazeY
-                        //return { time: cols[10], x: cols[27], y: cols[28], fx: cols[38], fy, cols[39], mx:cols[46], my: cols[47] }; // Timestamp, GazeX, GazeY, FixationX, FixationY, (mouse?)X, (mouse?)Y
+                        return { time: parseInt((cols[11] || "").replace("_", ""), 10), x: cols[28], y: cols[29] }; // Timestamp, GazeX, GazeY
+                        //return { time: cols[11], x: cols[28], y: cols[29], fx: cols[39], fy, cols[40], mx:cols[47], my: cols[48] }; // Timestamp, GazeX, GazeY, FixationX, FixationY, (mouse?)X, (mouse?)Y
                 });
         cb(eye_tracker_data);
-        console.log("eye tracker data read finished");
+        console.log("eye tracker data read finished", eye_tracker_data);
 };
 const make_reader = (parser, cb) => {
         const FR = new FileReader();
@@ -123,6 +159,33 @@ const make_reader = (parser, cb) => {
         FR.onabort = e => console.log(e);
         return data => FR.readAsText(data);
 };
+
+const GazePoint = styled.div`
+        position: absolute;
+        &.before {
+                content: "";
+                display: block;
+                width: 20px;
+                height: 20px;
+                margin: -10px 0 0 -10px;
+                border: 2px solid orange;
+                background: rgba(255, 237, 98, 0.31);
+        }
+`;
+
+class Gaze extends React.Component {
+        render() {
+                if (!this.props.gaze) {
+                        return null;
+                }
+                const point = this.props.gaze[Math.round(this.props.gaze.length * this.props.timepoint)];
+                return (
+                        <GazeCanvas>
+                                {point && <GazePoint style={{ top: point.y + "px", left: point.x + "px" }} />}
+                        </GazeCanvas>
+                );
+        }
+}
 
 class PlayerScreen extends React.Component {
         componentDidUpdate(prevProps) {
@@ -154,6 +217,7 @@ class PlayerScreen extends React.Component {
         render() {
                 return (
                         <div>
+                                <Gaze gaze={this.props.gaze} timepoint={this.props.timepoint} />
                                 <PlayerFrame ref={r => (this.root = r)} />
                         </div>
                 );
@@ -175,61 +239,27 @@ const TimeLine = ({ total, current, onChange }) => {
         );
 };
 
-const DropZone = styled.div`
-        position: fixed;
-        z-index: 999;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: rgba(255, 255, 255, 0.7);
-        &:before,
-        &:after {
-                content: "Drop Here!";
-                z-index: 999;
-                top: 0;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                display: block;
-                width: 300px;
-                text-align: center;
-                font-size: 30px;
-                position: absolute;
-                margin: auto;
-                font-family: sans-serif;
-                height: 30px;
-                color: #333;
-        }
-        &:after {
-                content: "";
-                width: calc(100% - 30px);
-                height: calc(100% - 30px);
-                border-radius: 15px;
-                border: 5px dashed;
-        }
-`;
-
 class App extends Component {
-        state = { events: null, eyetracker: null, play: false, time: null, dropping: false };
-        setEyetracker = () => {
+        state = { events: null, gaze: null, play: false, time: null, dropping: false };
+        setGaze = () => {
                 if (!this.state.events || !eye_tracker_data) {
                         return;
                 }
                 const start = formatMachineDateTime(this.state.events[0].timestamp);
                 const end = formatMachineDateTime(this.state.events[this.state.events.length - 1].timestamp);
-                const eyetracker = eye_tracker_data.filter(e => e.time && (e.time > start || e.time < end));
-                this.setState({ eyetracker }, () => console.log(this.state.eyetracker));
+                console.log(start, end, eye_tracker_data.slice(100, 110));
+                const gaze = eye_tracker_data.filter(e => e.time && (e.time > start && e.time < end));
+                this.setState({ gaze }, () => console.log(this.state.gaze));
         };
         componentDidMount() {
                 this.reader_events = make_reader(parse_events, events =>
                         this.setState({ events: null, play: false }, () => {
-                                this.setState({ events, play: true }, () => this.setEyetracker());
+                                this.setState({ events, play: true }, () => this.setGaze());
                         })
                 );
                 this.reader_eyetracker = make_reader(parse_eyetracker, () =>
-                        this.setState({ eyetracker: null, play: false }, () => {
-                                this.setEyetracker();
+                        this.setState({ gaze: null, play: false }, () => {
+                                this.setGaze();
                         })
                 );
                 document.addEventListener("dragover", e => e.preventDefault(), false);
@@ -237,13 +267,14 @@ class App extends Component {
                         "drop",
                         e => {
                                 e.preventDefault();
-                                const file = e.dataTransfer.files[0];
-                                const ext = file.name.match(/\.(\w+)$/)[1];
-                                if (ext === "txt") {
-                                        this.reader_eyetracker(file);
-                                } else if (["json", "html", "rec"].includes(ext)) {
-                                        this.reader_events(file);
-                                }
+                                Array.from(e.dataTransfer.files).forEach(file => {
+                                        const ext = file.name.match(/\.(\w+)$/)[1];
+                                        if (ext === "txt") {
+                                                this.reader_eyetracker(file);
+                                        } else if (["json", "html", "rec"].includes(ext)) {
+                                                this.reader_events(file);
+                                        }
+                                });
                         },
                         false
                 );
@@ -309,6 +340,7 @@ class App extends Component {
                         <>
                                 <PlayerScreen
                                         {...this.state}
+                                        timepoint={this.state.time / total_time}
                                         onTimeOffsetChange={time => {
                                                 this.setState({ time });
                                         }}
