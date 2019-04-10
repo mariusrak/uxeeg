@@ -24,4 +24,20 @@ const formatTime = date => {
         const d = new Date(date);
         return `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`;
 };
-export { formatDate, formatDateTime, formatTime, formatMachineDateTime };
+
+const perc2color = perc => {
+        perc = 100 - perc * 100;
+        var r,
+                g,
+                b = 0;
+        if (perc < 50) {
+                r = 255;
+                g = Math.round(5.1 * perc);
+        } else {
+                g = 255;
+                r = Math.round(510 - 5.1 * perc);
+        }
+        var h = r * 0x10000 + g * 0x100 + b * 0x1;
+        return "#" + ("000000" + h.toString(16)).slice(-6);
+};
+export { formatDate, formatDateTime, formatTime, formatMachineDateTime, perc2color };

@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import { perc2color } from "./utils";
 
 const GazeCanvas = styled.div`
         position: absolute;
@@ -9,40 +10,56 @@ const GazeCanvas = styled.div`
         right: 0;
         margin: auto;
         z-index: 2;
-`;
-const GazePoint = styled.div`
-        position: absolute;
-        &:before {
-                content: "";
-                display: block;
-                width: 20px;
-                height: 20px;
-                margin: -10px 0 0 -10px;
-                border: 2px solid orange;
-                background: rgba(255, 237, 98, 0.31);
-                border-radius: 50%;
+        svg {
+                position: absolute;
         }
 `;
 
-class Gaze extends React.Component {
-        render() {
-                if (!this.props.gaze) {
-                        return null;
-                }
-                const points = [];
-                const current = Math.round(this.props.gaze.length * this.props.timepoint);
-                for (let i = Math.max(current - 10, 0); i < Math.min(current + 10, this.props.gaze.length - 1); ++i) {
-                        points.push(this.props.gaze[i]);
-                }
-                // const point = this.props.gaze[Math.round(this.props.gaze.length * this.props.timepoint)];
-                return (
-                        <GazeCanvas>
-                                {/* {point && <GazePoint style={{ top: point.y + "px", left: point.x + "px" }} />} */}
-                                {points.map((point, i) => (
-                                        <GazePoint key={i} style={{ top: point.y + "px", left: point.x + "px" }} />
-                                ))}
-                        </GazeCanvas>
-                );
+const traceLength = 200;
+const Gaze = ({ gaze, eeg_percent, timepoint, width, height }) => {
+        if (!gaze) {
+                return null;
         }
-}
+        const points = [];
+        const current = Math.round(gaze.length * timepoint);
+        for (let i = Math.max(current - traceLength, 0); i < Math.min(current + traceLength, gaze.length - 1); ++i) {
+                if (gaze[i].x == -1 || gaze[i].y == -1) {
+                        continue;
+                }
+                points.push(gaze[i]);
+        }
+        if (!gaze[current]) {
+                return null;
+        }
+        const color = perc2color(eeg_percent(timepoint));
+        return (
+                <GazeCanvas>
+                        <svg viewBox={`0 0 ${width} ${height}`}>
+                                {points.slice(0, -1).map((point, i) => (
+                                        <>
+                                                <path
+                                                        strokeWidth="3"
+                                                        opacity={color}
+                                                        fill="none"
+                                                        stroke={color}
+                                                        d={`M${point.x},${point.y} L${points[i + 1].x},${
+                                                                points[i + 1].y
+                                                        }`}
+                                                        key={i}
+                                                />
+                                        </>
+                                ))}
+                                <circle
+                                        cx={gaze[current].x}
+                                        cy={gaze[current].y}
+                                        r="20"
+                                        stroke={color}
+                                        strokeWidth="2"
+                                        fill={color}
+                                        fillOpacity="0.5"
+                                />
+                        </svg>
+                </GazeCanvas>
+        );
+};
 export default Gaze;

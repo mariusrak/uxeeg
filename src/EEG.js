@@ -1,82 +1,73 @@
 import React from "react";
+import ReactDOM from "react-dom";
 import styled from "styled-components";
-import { Charts, ChartContainer, ChartRow, YAxis, LineChart, Baseline } from "react-timeseries-charts";
 
-const ChartContainerStyled = styled(ChartContainer)`
-        position: absolute;
-        bottom: 50px;
+const EEGContainer = styled.div`
+        /* position: absolute; */
+        /* bottom: 80px; */
+        /* left: 0;
+        right: 0; */
+        height: 250px;
+        background: #fff;
+
+        /* canvas {
+                width: 100%;
+                height: 100%;
+        } */
 `;
-const baselineStyleLite = {
-        line: {
-                stron: "steelblue",
-                strokeWidth: 1,
-                opacity: 0.5
-        },
-        label: {
-                fill: "steelblue"
-        }
-};
-const baselineStyle = {
-        line: {
-                stron: "steelblue",
-                strokeWidth: 1,
-                opacity: 0.4,
-                strokeDasharray: "none"
-        },
-        label: {
-                fill: "steelblue"
-        }
-};
 
 class EEG extends React.Component {
+        state = { width: null, height: null };
+        draw() {
+                console.log("drawing");
+                const points = this.props.data.map(d => d.v);
+                const min = Math.min(...points) * 1.05;
+                const max = Math.max(...points);
+                const d2y = v => ((v - min) / (max - min)) * this.state.height;
+                const step = this.state.width / points.length;
+                const ctx = this.canvas.getContext("2d");
+                ctx.moveTo(0, 999);
+                points.forEach((d, i) => {
+                        ctx.lineTo(step * (i + 1), d2y(d) * 0.95);
+                });
+                ctx.stroke();
+        }
+        componentDidMount() {
+                this.componentDidUpdate();
+        }
+        componentDidUpdate() {
+                if (
+                        !this.canvas ||
+                        !this.container ||
+                        !document.body.contains(this.canvas) ||
+                        !document.body.contains(this.container)
+                ) {
+                        return;
+                }
+                const rect = ReactDOM.findDOMNode(this.container).getBoundingClientRect();
+                if (!rect) {
+                        return;
+                }
+                if (rect.width !== this.state.width || rect.height !== this.state.height) {
+                        this.setState({ width: rect.width, height: rect.height }, () => {
+                                this.draw();
+                        });
+                }
+        }
         render() {
-                const series = this.props.data;
                 return (
-                        <ChartContainerStyled timeRange={series.range()} format="relative">
-                                <ChartRow height="150">
-                                        <YAxis
-                                                id="eeg"
-                                                label="Value from EEG"
-                                                min={series.min()}
-                                                max={series.max()}
-                                                width="60"
-                                                format="relative"
-                                        />
-                                        <Charts>
-                                                <LineChart axis="eeg" series={series} />
-                                                <Baseline
-                                                        axis="eeg"
-                                                        style={baselineStyleLite}
-                                                        value={series.max()}
-                                                        label="Max"
-                                                        position="right"
-                                                />
-                                                <Baseline
-                                                        axis="eeg"
-                                                        style={baselineStyleLite}
-                                                        value={series.min()}
-                                                        label="Min"
-                                                        position="right"
-                                                />
-                                                <Baseline
-                                                        axis="eeg"
-                                                        style={baselineStyleLite}
-                                                        value={series.avg() - series.stdev()}
-                                                />
-                                                <Baseline
-                                                        axis="eeg"
-                                                        style={baselineStyleLite}
-                                                        value={series.avg() + series.stdev()}
-                                                />
-                                                <Baseline
-                                                        axis="eeg"
-                                                        style={baselineStyle}
-                                                        value={series.avg()}
-                                                        label="Avg"
-                                                />
-                                        </Charts>
-                                </ChartRow>
-                        </ChartContainerStyled>
+                        <EEGContainer
+                                ref={c => {
+                                        this.container = c;
+                                }}
+                        >
+                                <canvas
+                                        {...this.state}
+                                        ref={c => {
+                                                this.canvas = c;
+                                        }}
+                                />
+                        </EEGContainer>
                 );
         }
 }

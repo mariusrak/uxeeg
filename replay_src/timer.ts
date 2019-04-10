@@ -7,6 +7,7 @@ export default class Timer {
         private config: playerConfig;
         private raf: number;
         public onTimeOffsetChange: any;
+        public calculateGazes: any = () => {};
 
         constructor(config: playerConfig, actions: actionWithDelay[] = []) {
                 this.actions = actions;
@@ -39,11 +40,13 @@ export default class Timer {
                 const { actions, config } = this;
                 const self = this;
                 function check(time: number) {
+                        const nextTimeOffset = self.timeOffset + (time - lastTimestamp) * config.speed;
                         while (actions.length) {
                                 const action = actions[0];
                                 if (self.timeOffset >= action.delay) {
                                         actions.shift();
                                         action.doAction();
+                                        self.calculateGazes(self.timeOffset, nextTimeOffset);
                                 } else {
                                         break;
                                 }
@@ -51,7 +54,7 @@ export default class Timer {
                         if (actions.length > 0) {
                                 self.raf = requestAnimationFrame(check);
                         }
-                        self.timeOffset += (time - lastTimestamp) * config.speed;
+                        self.timeOffset = nextTimeOffset;
                         if (self.onTimeOffsetChange) {
                                 self.onTimeOffsetChange(self.timeOffset);
                         }
@@ -65,6 +68,10 @@ export default class Timer {
                         cancelAnimationFrame(this.raf);
                 }
                 this.actions.length = 0;
+        }
+
+        public isCleared() {
+                return !this.actions.length;
         }
 
         private findActionIndex(action: actionWithDelay): number {

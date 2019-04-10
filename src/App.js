@@ -1,16 +1,19 @@
 import React, { Component } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import EEG from "./EEG";
+import AOIs from "./AOIs";
 import PlayerScreen from "./PlayerScreen";
 import "./replay/styles/style.css";
 import TimeLine from "./TimeLine";
-import { formatMachineDateTime } from "./utils";
+import { formatMachineDateTime, perc2color } from "./utils";
 import Metadata from "./Metadata";
 
 const GlobalStyle = createGlobalStyle`
         html,
         body {
                 height: 100%;
+                margin: 0;
+                background: ${p => p.color}
         }
 `;
 const DropZone = styled.div`
@@ -47,13 +50,27 @@ const DropZone = styled.div`
                 border: 5px dashed;
         }
 `;
+const Overlay = styled.div`
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+`;
 const Controls = styled.div`
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        height: 80px;
         z-index: 3;
+        background: rgba(255, 255, 255, 0.4);
+`;
+const TimeLineStyled = styled(TimeLine)`
+        position: absolute;
+        bottom: 50px;
+        left: 0;
+        right: 0;
 `;
 
 const make_reader = (before, parser, after) => {
@@ -99,7 +116,17 @@ const parse_eyetracker = (txt, cb) => {
                 });
         cb();
 };
-const parse_eeg = (txt, cb) => {};
+const parse_eeg = (txt, cb) => {
+        eeg_data = txt
+                .split(/[\r\n]+/gm)
+                .slice(1)
+                .map(line => {
+                        const cols = line.split(/\s+/).slice(1, 3);
+                        // return [parseFloat(cols[0]), parseFloat(cols[1])];
+                        return { t: parseFloat(cols[0]), v: parseFloat(cols[1]) };
+                });
+        cb();
+};
 
 class App extends Component {
         state = { events: null, gaze: null, eeg: null, play: false, time: null, dropping: false };
@@ -121,16 +148,21 @@ class App extends Component {
                 if (!this.state.events || !eeg_data) {
                         return;
                 }
-                // const start = formatMachineDateTime(this.state.events[0].timestamp);
-                // const end = formatMachineDateTime(this.state.events[this.state.events.length - 1].timestamp);
-                // const gaze = eye_tracker_data.filter(e => e.time && (e.time > start && e.time < end));
-                // this.setState({ gaze });
+                const start = this.state.events[0].timestamp;
+                const end = this.state.events[this.state.events.length - 1].timestamp;
+                const eeg = eeg_data.filter(v => v.t && (v.t > start && v.t < end));
+                // const eeg = eeg_data.filter(v => v[0] && (v[0] > start && v[0] < end));
+                this.setState({ eeg });
         };
         componentDidUpdate() {
                 if (!this.state.events && this.state.play) {
                         this.setState({ play: false });
                 }
         }
+        iframeSize = dimension => {
+                console.log("iframeSize  dimension", dimension);
+                this.setState({ iframeWidth: dimension.width, iframeHeight: dimension.height });
+        };
         componentDidMount() {
                 this.reader_events = make_reader(
                         file => this.setState({ file_web: file.name, events: null }),
@@ -140,12 +172,12 @@ class App extends Component {
                 this.reader_eyetracker = make_reader(
                         file => this.setState({ file_gaze: file.name, gaze: null }),
                         parse_eyetracker,
-                        gaze => this.setState({ gaze }, () => this.cutData(() => ({ play: !!this.state.events })))
+                        () => this.cutData(() => ({ play: !!this.state.events }))
                 );
                 this.reader_eeg = make_reader(
                         file => this.setState({ file_eeg: file.name, eeg: null }),
                         parse_eeg,
-                        eeg => this.setState({ eeg }, () => this.cutData(() => ({ play: !!this.state.events })))
+                        () => this.cutData(() => ({ play: !!this.state.events }))
                 );
                 document.addEventListener("dragover", e => e.preventDefault(), false);
                 document.addEventListener(
@@ -181,19 +213,36 @@ class App extends Component {
                 const total_time =
                         this.state.events &&
                         this.state.events[this.state.events.length - 1].timestamp - this.state.events[0].timestamp;
+                const timepoint = this.state.time / total_time;
                 const event = this.findEventIndex(this.state.time);
                 return (
                         <>
+                                <Overlay />
                                 <PlayerScreen
                                         {...this.state}
+                                        setIframe={iframe => this.setState({ iframe })}
                                         event={event}
-                                        timepoint={this.state.time / total_time}
+                                        timepoint={timepoint}
                                         onTimeOffsetChange={time => {
                                                 this.setState({ time });
                                         }}
+                                        calculateGazes={(start, end) => this.AOIs.calculateGazes(start, end)}
+                                        iframeSize={this.iframeSize}
                                 />
-                                {/* <EEG /> */}
                                 <Controls>
+                                        <AOIs
+                                                ref={a => (this.AOIs = a)}
+                                                iframe={this.state.iframe}
+                                                gaze={this.state.gaze}
+                                                timepoint={timepoint}
+                                        />
+                                        <TimeLineStyled
+                                                total={total_time}
+                                                current={this.state.time}
+                                                onChange={t => this.setState({ setTime: t })}
+                                        >
+                                                {this.state.eeg && <EEG data={this.state.eeg} />}
+                                        </TimeLineStyled>
                                         <button onClick={() => this.setState({ play: !this.state.play })}>
                                                 {this.state.play ? (
                                                         <>
@@ -206,11 +255,6 @@ class App extends Component {
                                                 )}
                                         </button>{" "}
                                         <Metadata {...this.state} event={event} />
-                                        <TimeLine
-                                                total={total_time}
-                                                current={this.state.time}
-                                                onChange={t => this.setState({ setTime: t })}
-                                        />
                                 </Controls>
                                 {!this.state.events && <DropZone />}
                                 <GlobalStyle />

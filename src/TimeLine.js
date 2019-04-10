@@ -3,18 +3,45 @@ import ReactDOM from "react-dom";
 import styled from "styled-components";
 
 const TimeLineStyled = styled.div`
+        position: relative;
         width: 100%;
         margin: 5px 0;
         cursor: col-resize;
         border: solid #777;
         border-width: 1px 0;
+        min-height: 10px;
+        overflow: hidden;
 `;
 const TimeLinePrgress = styled.div`
-        background: #777;
-        height: 10px;
+        background: rgba(25, 25, 25, 0.7);
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+`;
+const TimeLineWindow = styled.div`
+        background: rgba(25, 25, 25, 0.85);
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+
+        &::before {
+                content: "";
+                background: inherit;
+                position: absolute;
+                left: calc(-100% - 10px);
+                top: inherit;
+                bottom: inherit;
+                width: inherit;
+        }
+`;
+const ChildrenCntainer = styled.div`
+        /* position: absolute; */
 `;
 
-const TimeLine = ({ total, current, onChange }) => {
+const TimeLine = ({ total, current, onChange, children }) => {
         let ref;
         return (
                 <TimeLineStyled
@@ -24,7 +51,12 @@ const TimeLine = ({ total, current, onChange }) => {
                         }}
                         ref={r => (ref = r)}
                 >
-                        <TimeLinePrgress style={{ width: (current / total) * 100 + "%" }} />
+                        <ChildrenCntainer>{children}</ChildrenCntainer>
+                        {children ? (
+                                <TimeLineWindow style={{ left: "calc(" + (current / total) * 100 + "% + 10px)" }} />
+                        ) : (
+                                <TimeLinePrgress style={{ width: (current / total) * 100 + "%" }} />
+                        )}
                 </TimeLineStyled>
         );
 };

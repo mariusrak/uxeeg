@@ -33,6 +33,8 @@ const mitt = (mittProxy as any).default || mittProxy;
 const REPLAY_CONSOLE_PREFIX = "[replayer]";
 
 export class Replayer {
+        public onPlayResize: any;
+
         public wrapper: HTMLDivElement;
         public iframe: HTMLIFrameElement;
 
@@ -68,9 +70,14 @@ export class Replayer {
                         skipInactive: false,
                         showWarning: true,
                         showDebug: false,
-                        blockClass: "rr-block"
+                        blockClass: "rr-block",
+                        onPlayResize: () => {}
                 };
                 this.config = Object.assign({}, defaultConfig, config);
+
+                if (this.config.onPlayResize) {
+                        this.onPlayResize = this.config.onPlayResize;
+                }
 
                 this.timer = new Timer(this.config);
                 smoothscroll.polyfill();
@@ -135,7 +142,7 @@ export class Replayer {
         }
 
         public rewind(timeOffset = 0) {
-                const played = !!this.timer.actions.length;
+                const played = !this.timer.isCleared();
                 this.pause();
                 this.timer.timeOffset = timeOffset;
                 this.sync(timeOffset);
@@ -177,8 +184,12 @@ export class Replayer {
         }
 
         private handleResize(dimension: viewportResizeDimention) {
+                console.log("handleResize dimension", dimension);
                 this.iframe.width = `${dimension.width}px`;
                 this.iframe.height = `${dimension.height}px`;
+                if (this.onPlayResize) {
+                        this.onPlayResize(dimension);
+                }
         }
 
         // TODO: add speed to mouse move timestamp calculation
