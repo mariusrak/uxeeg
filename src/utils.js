@@ -2,6 +2,19 @@ const formatDateTime = date => {
         const d = new Date(date);
         return `${d.getDate()}.${d.getMonth()}.${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`;
 };
+const readIMotionsDate = date => {
+        const t = date.toString();
+        const p = [
+                t.substr(0, 4),
+                t.substr(4, 2) - 1,
+                t.substr(6, 2),
+                t.substr(8, 2),
+                t.substr(10, 2),
+                t.substr(12, 2),
+                t.substr(14, 3)
+        ];
+        return new Date(...p);
+};
 const formatMachineDateTime = date => {
         const d = new Date(date);
         return parseInt(
@@ -40,4 +53,4 @@ const perc2color = perc => {
         var h = r * 0x10000 + g * 0x100 + b * 0x1;
         return "#" + ("000000" + h.toString(16)).slice(-6);
 };
-export { formatDate, formatDateTime, formatTime, formatMachineDateTime, perc2color };
+export { formatDate, formatDateTime, formatTime, formatMachineDateTime, readIMotionsDate, perc2color };

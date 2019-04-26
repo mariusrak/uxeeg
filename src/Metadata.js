@@ -45,7 +45,9 @@ const EventsData = props => {
 
 export default props => (
         <>
+                <br />
                 <EventsData {...props} />
+                <br />
                 {props.file_web && (
                         <>
                                 {" "}
@@ -62,6 +64,12 @@ export default props => (
                         <>
                                 {" "}
                                 File EEG: <b>{props.file_eeg}</b> {props.eeg ? "✔" : "❌"}
+                        </>
+                )}
+                {props.file_aois && (
+                        <>
+                                {" "}
+                                File AOIs: <b>{props.file_aois}</b> {props.aois ? "✔" : "❌"}
                         </>
                 )}
         </>

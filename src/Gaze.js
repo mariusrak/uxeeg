@@ -16,7 +16,7 @@ const GazeCanvas = styled.div`
 `;
 
 const traceLength = 200;
-const Gaze = ({ gaze, eeg_percent, timepoint, width, height }) => {
+const Gaze = ({ gaze, eeg_percent, timepoint, width, height, offsetTop }) => {
         if (!gaze) {
                 return null;
         }
@@ -42,16 +42,16 @@ const Gaze = ({ gaze, eeg_percent, timepoint, width, height }) => {
                                                         opacity={color}
                                                         fill="none"
                                                         stroke={color}
-                                                        d={`M${point.x},${point.y} L${points[i + 1].x},${
-                                                                points[i + 1].y
-                                                        }`}
+                                                        d={`M${point.x},${point.y - offsetTop} L${
+                                                                points[i + 1].x
+                                                        },${points[i + 1].y - offsetTop}`}
                                                         key={i}
                                                 />
                                         </>
                                 ))}
                                 <circle
                                         cx={gaze[current].x}
-                                        cy={gaze[current].y}
+                                        cy={gaze[current].y - offsetTop}
                                         r="20"
                                         stroke={color}
                                         strokeWidth="2"

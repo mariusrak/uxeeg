@@ -127,9 +127,19 @@ const parse_eeg = (txt, cb) => {
                 });
         cb();
 };
+const parse_aois = (txt, cb) => {
+        const aois = txt.match(/(%%.*[\n\r]+.*[\n\r]*)/g).reduce((aois, m) => {
+                const split = m.split(/[\r\n]+/);
+                const label = split[0].replace(/^%%/, "").trim();
+                const xpath = split[1].trim();
+                aois[xpath] = { label, ranges: [] };
+                return aois;
+        }, {});
+        cb(aois);
+};
 
 class App extends Component {
-        state = { events: null, gaze: null, eeg: null, play: false, time: null, dropping: false };
+        state = { events: null, gaze: null, eeg: null, play: false, time: null, dropping: false, speed: 2 };
         cutData = newStateFn => {
                 this.cutGaze();
                 this.cutEEG();
@@ -160,7 +170,6 @@ class App extends Component {
                 }
         }
         iframeSize = dimension => {
-                console.log("iframeSize  dimension", dimension);
                 this.setState({ iframeWidth: dimension.width, iframeHeight: dimension.height });
         };
         componentDidMount() {
@@ -179,6 +188,11 @@ class App extends Component {
                         parse_eeg,
                         () => this.cutData(() => ({ play: !!this.state.events }))
                 );
+                this.reader_aois = make_reader(
+                        file => this.setState({ file_aois: file.name, aois: null }),
+                        parse_aois,
+                        aois => this.setState({ aois })
+                );
                 document.addEventListener("dragover", e => e.preventDefault(), false);
                 document.addEventListener(
                         "drop",
@@ -186,7 +200,9 @@ class App extends Component {
                                 e.preventDefault();
                                 Array.from(e.dataTransfer.files).forEach(file => {
                                         const ext = file.name.match(/\.(\w+)$/)[1];
-                                        if (ext === "txt") {
+                                        if (file.name === "AOIs.txt") {
+                                                this.reader_aois(file);
+                                        } else if (ext === "txt") {
                                                 this.reader_eyetracker(file);
                                         } else if (["json", "html", "rec"].includes(ext)) {
                                                 this.reader_events(file);
@@ -215,10 +231,17 @@ class App extends Component {
                         this.state.events[this.state.events.length - 1].timestamp - this.state.events[0].timestamp;
                 const timepoint = this.state.time / total_time;
                 const event = this.findEventIndex(this.state.time);
+                const offsetTop =
+                        this.state.events &&
+                        this.state.events[event] &&
+                        this.state.events[event]._windowProps &&
+                        this.state.events[event]._windowProps.outerHeight -
+                                this.state.events[event]._windowProps.innerHeight;
                 return (
                         <>
                                 <Overlay />
                                 <PlayerScreen
+                                        makeSmaller={document.body.clientWidth < 2250}
                                         {...this.state}
                                         setIframe={iframe => this.setState({ iframe })}
                                         event={event}
@@ -227,15 +250,19 @@ class App extends Component {
                                                 this.setState({ time });
                                         }}
                                         calculateGazes={(start, end) => this.AOIs.calculateGazes(start, end)}
+                                        offsetTop={offsetTop}
                                         iframeSize={this.iframeSize}
                                 />
+                                <AOIs
+                                        ref={a => (this.AOIs = a)}
+                                        AOIs={this.state.aois}
+                                        iframe={this.state.iframe}
+                                        gaze={this.state.gaze}
+                                        eeg={this.state.eeg}
+                                        offsetTop={offsetTop}
+                                        timepoint={timepoint}
+                                />
                                 <Controls>
-                                        <AOIs
-                                                ref={a => (this.AOIs = a)}
-                                                iframe={this.state.iframe}
-                                                gaze={this.state.gaze}
-                                                timepoint={timepoint}
-                                        />
                                         <TimeLineStyled
                                                 total={total_time}
                                                 current={this.state.time}
@@ -253,7 +280,12 @@ class App extends Component {
                                                                 Paused, <b>Play ></b>
                                                         </>
                                                 )}
-                                        </button>{" "}
+                                        </button>
+                                        {[1, 2, 3, 4].map(n => (
+                                                <button onClick={() => this.setState({ speed: n })}>
+                                                        {this.state.speed === n ? <b>--&gt; {n} &lt;--</b> : n}
+                                                </button>
+                                        ))}
                                         <Metadata {...this.state} event={event} />
                                 </Controls>
                                 {!this.state.events && <DropZone />}

@@ -13,14 +13,14 @@ const TimeLineStyled = styled.div`
         overflow: hidden;
 `;
 const TimeLinePrgress = styled.div`
-        background: rgba(25, 25, 25, 0.7);
+        background: rgba(25, 25, 25, 0.5);
         position: absolute;
         left: 0;
         top: 0;
         bottom: 0;
 `;
 const TimeLineWindow = styled.div`
-        background: rgba(25, 25, 25, 0.85);
+        background: rgba(25, 25, 25, 0.5);
         position: absolute;
         left: 0;
         top: 0;

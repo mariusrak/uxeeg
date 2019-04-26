@@ -184,7 +184,6 @@ export class Replayer {
         }
 
         private handleResize(dimension: viewportResizeDimention) {
-                console.log("handleResize dimension", dimension);
                 this.iframe.width = `${dimension.width}px`;
                 this.iframe.height = `${dimension.height}px`;
                 if (this.onPlayResize) {
