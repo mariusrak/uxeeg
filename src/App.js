@@ -118,13 +118,29 @@ const parse_eyetracker = (txt, cb) => {
 };
 const parse_eeg = (txt, cb) => {
         eeg_data = txt
-                .split(/[\r\n]+/gm)
-                .slice(1)
+                // .split(/[\r\n]+/gm)
+                // .slice(1)
+                .match(/(\d+\t[-\d\.]+\t[\d\.]+)/gm)
                 .map(line => {
-                        const cols = line.split(/\s+/).slice(1, 3);
+                        const cols = line.split(/\t+/).slice(1, 3);
                         // return [parseFloat(cols[0]), parseFloat(cols[1])];
-                        return { t: parseFloat(cols[0]), v: parseFloat(cols[1]) };
+                        return { t: parseFloat(cols[1]), v: parseFloat(cols[0]) };
                 });
+        const valsOnly = eeg_data.map(r => r.v);
+        let len = valsOnly.length;
+        let max = -Infinity;
+        let min = Infinity;
+
+        while (len--) {
+                if (valsOnly[len] > max) {
+                        max = valsOnly[len];
+                }
+                if (valsOnly[len] < min) {
+                        min = valsOnly[len];
+                }
+        }
+        eeg_data.min = min;
+        eeg_data.max = max;
         cb();
 };
 const parse_aois = (txt, cb) => {
@@ -249,7 +265,9 @@ class App extends Component {
                                         onTimeOffsetChange={time => {
                                                 this.setState({ time });
                                         }}
-                                        calculateGazes={(start, end) => this.AOIs.calculateGazes(start, end)}
+                                        calculateGazes={(start, end) =>
+                                                this.AOIs && this.AOIs.calculateGazes(start, end)
+                                        }
                                         offsetTop={offsetTop}
                                         iframeSize={this.iframeSize}
                                 />
@@ -268,7 +286,13 @@ class App extends Component {
                                                 current={this.state.time}
                                                 onChange={t => this.setState({ setTime: t })}
                                         >
-                                                {this.state.eeg && <EEG data={this.state.eeg} />}
+                                                {this.state.eeg && (
+                                                        <EEG
+                                                                data={this.state.eeg}
+                                                                min={eeg_data.min}
+                                                                max={eeg_data.max}
+                                                        />
+                                                )}
                                         </TimeLineStyled>
                                         <button onClick={() => this.setState({ play: !this.state.play })}>
                                                 {this.state.play ? (

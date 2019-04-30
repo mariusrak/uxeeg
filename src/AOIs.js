@@ -37,14 +37,16 @@ export default class AOIs extends React.Component {
                 if (!prevProps.AOIs && this.props.AOIs) {
                         this.setState({ AOIs: this.props.AOIs });
                 }
-                if (this.props.timepoint >= 1 && prevProps.timepoint < 1) {
-                        this.closeRanges();
-                }
                 if (!this.props.gaze) {
                         return;
                 }
-                if (!prevProps.gaze || prevProps.gaze[0].time !== this.props.gaze[0].time) {
-                        this.setState({ beginning: readIMotionsDate(this.props.gaze[0].time) });
+                if (this.props.timepoint >= 1 && prevProps.timepoint < 1) {
+                        this.closeRanges();
+                }
+                if (this.props.gaze && this.props.gaze[0] && this.props.gaze[0].time) {
+                        if (!prevProps.gaze || prevProps.gaze[0].time !== this.props.gaze[0].time) {
+                                this.setState({ beginning: readIMotionsDate(this.props.gaze[0].time) });
+                        }
                 }
         }
         closeRanges = () => {
@@ -190,7 +192,8 @@ export default class AOIs extends React.Component {
                 this.setState({ lastGazeI: i, lastEegI: e, lastGazeAOI: lastAOI, AOIs });
         };
         render() {
-                const start = this.props.gaze && readIMotionsDate(this.props.gaze[0].time).getTime();
+                const start =
+                        this.props.gaze && this.props.gaze[0] && readIMotionsDate(this.props.gaze[0].time).getTime();
                 if (!this.props.AOIs) {
                         return null;
                 }

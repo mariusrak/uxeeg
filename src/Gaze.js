@@ -15,7 +15,7 @@ const GazeCanvas = styled.div`
         }
 `;
 
-const traceLength = 200;
+const traceLength = 100;
 const Gaze = ({ gaze, eeg_percent, timepoint, width, height, offsetTop }) => {
         if (!gaze) {
                 return null;
