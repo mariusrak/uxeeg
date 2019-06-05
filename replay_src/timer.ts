@@ -63,6 +63,21 @@ export default class Timer {
                 this.raf = requestAnimationFrame(check);
         }
 
+        public playAll() {
+                this.actions.sort((a1, a2) => a1.delay - a2.delay);
+                const { actions, config } = this;
+                const self = this;
+                while (actions.length) {
+                        const action = actions[0];
+                        actions.shift();
+                        action.doAction();
+                        if (self.timeOffset) {
+                                self.calculateGazes(self.timeOffset, action.delay);
+                        }
+                        self.timeOffset = action.delay;
+                }
+        }
+
         public clear() {
                 if (this.raf) {
                         cancelAnimationFrame(this.raf);

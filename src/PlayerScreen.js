@@ -64,6 +64,9 @@ class PlayerScreen extends React.Component {
                         this.Replayer.config.speed = this.props.speed;
                 }
         }
+        PlayWhole = () => {
+                this.Replayer.PlayWhole();
+        };
         eeg_percent = timepoint => {
                 if (!this.props.eeg) {
                         return 0.5;

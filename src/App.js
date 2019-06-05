@@ -270,6 +270,7 @@ class App extends Component {
                                         }
                                         offsetTop={offsetTop}
                                         iframeSize={this.iframeSize}
+                                        ref={r => (this.PlayerScreen = r)}
                                 />
                                 <AOIs
                                         ref={a => (this.AOIs = a)}
@@ -294,6 +295,7 @@ class App extends Component {
                                                         />
                                                 )}
                                         </TimeLineStyled>
+                                        <button onClick={() => this.PlayerScreen.PlayWhole()}>Play whole</button>
                                         <button onClick={() => this.setState({ play: !this.state.play })}>
                                                 {this.state.play ? (
                                                         <>

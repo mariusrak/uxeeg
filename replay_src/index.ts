@@ -162,6 +162,12 @@ export class Replayer {
                 this.emitter.emit(ReplayerEvents.Resume);
         }
 
+        public PlayWhole() {
+                this.timer.clear();
+                this.sync();
+                this.timer.playAll();
+        }
+
         private setupDom() {
                 this.wrapper = document.createElement("div");
                 this.wrapper.classList.add("replayer-wrapper");
